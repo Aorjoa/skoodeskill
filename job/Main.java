@@ -1,5 +1,3 @@
-
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -34,7 +32,7 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		Semaphore sem_flag = new Semaphore(32);
+		Semaphore sem_flag = new Semaphore(64);
 		Thread tc;
 		try {
 			
@@ -52,7 +50,7 @@ public class Main {
 			Class.forName("org.hsqldb.jdbcDriver");
 			connection = DriverManager.getConnection("jdbc:hsqldb://localhost/skoodeskill", "sa", "");
 			connection.prepareStatement("drop table dic if exists;").execute();
-			connection.prepareStatement("create table dic(word varchar(20) not null);").execute();
+			connection.prepareStatement("create table dic(word varchar(255) not null);").execute();
 
 			// Read file into StringBuilder
 			BufferedReader readfile = new BufferedReader(new FileReader(
@@ -65,10 +63,11 @@ public class Main {
 			System.out.println("Success! : Read file successful.");
 			for (String item : file_success.toString().split("\n")) {
 				String word = item.split(" ")[0];
+				if(!(word ==""))
 				// Write file invoke thread
 				word = word.toLowerCase();
 				sem_flag.acquire();
-				String insertsql = "insert into dic (word)" + "values ('"+word+"');";
+				String insertsql = "insert into dic (word)" + "values ('"+word.replaceAll("\'", "\'\'")+"');";
 				connection.prepareStatement(insertsql).execute();
 				tc = new Thread(new WriteThread(sem_flag, word));
 				tc.start();
@@ -200,7 +199,7 @@ class ZipFileFolk implements Runnable {
 				File new_zip_file = new File(file.toString() + ".zip");
 				long foldersize = (long) (findSize(file.toString()) / 1024.0);
 				long zip_size = (long) (new_zip_file.length() / 1024.0);
-				long per = (long) ((zip_size * 100.0) / foldersize);
+				long per =  (long)100.0 - (long) ((zip_size * 100.0) / foldersize);
 				System.out.println("Folder name : " + file.toString()
 						+ "\tSIZE : " + foldersize + " KB\tZIP size: "
 						+ zip_size + " KB\t%" + per);
@@ -255,7 +254,7 @@ class WriteThread implements Runnable {
 	public void run() {
 		try {
 			word = word.toUpperCase();
-			new File("./" + word.charAt(0) + "/" + word.charAt(1)).mkdirs();
+			if(word.length()>1){
 			BufferedWriter writefile = new BufferedWriter(
 					new OutputStreamWriter(new FileOutputStream(
 							"./"
@@ -272,6 +271,7 @@ class WriteThread implements Runnable {
 			}
 			writefile.write(word_in_file.toString());
 			writefile.close();
+			}
 		} catch (FileNotFoundException e) {
 			// Display : file not found.
 			System.out.println("Error! : File not found.");
