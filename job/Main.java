@@ -1,15 +1,21 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import sun.security.acl.WorldGroupImpl;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import net.lingala.zip4j.core.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.util.Zip4jConstants;
 
 public class Main {
 
@@ -19,6 +25,7 @@ public class Main {
 	public static void main(String[] args) {
 		Semaphore sem_flag = new Semaphore(32);
 		try {
+
 			// Read file into StringBuilder
 			BufferedReader readfile = new BufferedReader(new FileReader(
 					"OSWI.txt"));
@@ -36,7 +43,10 @@ public class Main {
 				new Thread(new WriteThread(sem_flag, word)).start();
 			}
 			System.out.println("Success! : Write file succussful.");
-
+			for (File file : new File("./").listFiles()) {
+				sem_flag.acquire();
+				new Thread(new ZipFileFolk(sem_flag, file)).start();
+			}
 		} catch (FileNotFoundException e) {
 			// Display : file not found.
 			System.out.println("Error! : File not found.");
@@ -54,6 +64,69 @@ public class Main {
 
 	}
 
+}
+
+class ZipFileFolk implements Runnable {
+	Semaphore sem_flag;
+	File file;
+
+	public ZipFileFolk(Semaphore sem_flag, File file) {
+		this.sem_flag = sem_flag;
+		this.file = file;
+	}
+
+	@Override
+	public void run() {
+		try {
+			if (file.isDirectory() && !file.toString().contains("/.")) {
+				ZipFile zipFile;
+				zipFile = new ZipFile(file.toString() + ".zip");
+				ZipParameters params = new ZipParameters();
+				params.setCompressionMethod(Zip4jConstants.COMP_DEFLATE);
+				params.setCompressionLevel(Zip4jConstants.DEFLATE_LEVEL_NORMAL);
+				zipFile.addFolder(file.toString(), params);
+				File new_zip_file = new File(file.toString() + ".zip");
+				long foldersize = (long) (findSize(file.toString()) / 1024.0);
+				long zip_size = (long) (new_zip_file.length() / 1024.0);
+				long per = (long) ((zip_size * 100.0) / foldersize);
+				System.out.println("Folder name : " + file.toString()
+						+ "\tSIZE : " + foldersize + " KB\tZIP size: "
+						+ zip_size + " KB\t%" + per);
+			}
+		} catch (ZipException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			sem_flag.release();
+		}
+	}
+
+	public static long findSize(String path) {
+		long totalSize = 0;
+		LinkedList<String> directory = new LinkedList<String>();
+		File file = new File(path);
+		if (file.isDirectory()) {
+			directory.add(file.getAbsolutePath());
+			while (directory.size() > 0) {
+				String folderPath = directory.get(0);
+				directory.remove(0);
+				File folder = new File(folderPath);
+				File[] filesInFolder = folder.listFiles();
+				int noOfFiles = filesInFolder.length;
+				for (int i = 0; i < noOfFiles; i++) {
+					File f = filesInFolder[i];
+					if (f.isDirectory()) {
+						directory.add(f.getAbsolutePath());
+					} else {
+						totalSize += f.length();
+					}
+				}
+			}
+		} else {
+			totalSize = file.length();
+		}
+		return totalSize;
+	}
 }
 
 class WriteThread implements Runnable {

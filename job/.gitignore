@@ -3,3 +3,6 @@
 /MyThread.class
 /WriteThread.class
 /Semaphore.class
+/ZipFileFolk.class
+/ZipFileFolk$Semaphore.class
+/ZipFileFolk$WriteThread.class
