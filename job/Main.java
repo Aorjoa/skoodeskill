@@ -19,6 +19,11 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.edit.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.hsqldb.Server;
 
 import net.lingala.zip4j.core.ZipFile;
@@ -92,7 +97,7 @@ public class Main {
 			while(dataset.next()){
 				all_word.add(dataset.getString(1));
 			}
-			int[] val = new int[4];
+			int[] val = new int[3];
 			for(String w : all_word){
 				val[0] = (w.length()>5)?val[0]+1:val[0];
 				Matcher	m = Pattern.compile("(.+)\\1+").matcher(w);
@@ -108,7 +113,8 @@ public class Main {
 			System.out.println("More than 5 word count : "+val[0]);
 			System.out.println("Word collision more than 2 char count : "+val[1]);
 			System.out.println("Word first letter same the last letter count : "+val[2]);
-			
+			while(!toPDF(all_word));
+			System.out.println("PDF has been export (report.pdf).");
 			
 		} catch (FileNotFoundException e) {
 			// Display : file not found.
@@ -135,7 +141,44 @@ public class Main {
 		}
 
 	}
+ public static boolean toPDF(LinkedList<String> data){
+	  PDDocument doc = null;
+      PDPage page = null;
 
+     try{
+         doc = new PDDocument();
+         page = new PDPage();
+         page.setMediaBox(PDPage.PAGE_SIZE_A4); 
+         doc.addPage(page);
+         PDFont font = PDType1Font.HELVETICA_BOLD;
+         PDPageContentStream content = new PDPageContentStream(doc, page);
+         int fit = 800;
+         for(String s : data){
+          if(fit < 50){
+                 page = new PDPage();
+                 page.setMediaBox(PDPage.PAGE_SIZE_A4);
+                 content = new PDPageContentStream(doc, page);
+                 doc.addPage(page);
+          	   fit=800;
+         }
+         content.beginText();
+         content.setFont( font, 10 );
+         content.appendRawCommands(font + " TL\n");
+         content.moveTextPositionByAmount( 10, fit );
+         content.drawString(Character.toUpperCase(s.charAt(0)) + s.substring(1));
+         content.appendRawCommands("T*\n");
+         content.endText();
+         content.close();
+         fit-=15;
+         }
+        doc.save("report.pdf");
+        doc.close();
+  } catch (Exception e){
+      System.out.println("Error! : Cannot export to pdf.");
+      return false;
+  }
+	return true;
+ }
 }
 
 class ZipFileFolk implements Runnable {
@@ -150,7 +193,7 @@ class ZipFileFolk implements Runnable {
 	@Override
 	public void run() {
 		try {
-			if (file.isDirectory() && !file.toString().contains("/.")) {
+			if (file.isDirectory() && !file.toString().contains("/.") && !file.toString().endsWith(".tmp")) {
 				ZipFile zipFile;
 				zipFile = new ZipFile(file.toString() + ".zip");
 				ZipParameters params = new ZipParameters();

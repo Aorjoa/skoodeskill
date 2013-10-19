@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="job/zip4j_1.3.1.jar"/>
 	<classpathentry kind="lib" path="job/hsqldb.jar"/>
+	<classpathentry kind="lib" path="job/pdfbox-app-1.8.2.jar"/>
 	<classpathentry kind="output" path="job"/>
 </classpath>
