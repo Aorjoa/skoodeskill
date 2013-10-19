@@ -255,6 +255,7 @@ class WriteThread implements Runnable {
 		try {
 			word = word.toUpperCase();
 			if(word.length()>1){
+		    new File("./" + word.charAt(0) + "/" + word.charAt(1)).mkdirs();
 			BufferedWriter writefile = new BufferedWriter(
 					new OutputStreamWriter(new FileOutputStream(
 							"./"
