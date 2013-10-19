@@ -1,7 +1,8 @@
+
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -11,13 +12,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -59,7 +56,7 @@ public class Main {
 
 			// Read file into StringBuilder
 			BufferedReader readfile = new BufferedReader(new FileReader(
-					"OSWI.txt"));
+					"./OSWI.txt"));
 			StringBuilder file_success = new StringBuilder();
 			String line = null;
 			while ((line = readfile.readLine()) != null) {
@@ -171,7 +168,7 @@ public class Main {
          content.close();
          fit-=15;
          }
-        doc.save("report.pdf");
+        doc.save("./report.pdf");
         doc.close();
   } catch (Exception e){
       System.out.println("Error! : Cannot export to pdf.");
