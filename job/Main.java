@@ -7,11 +7,20 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import org.hsqldb.Server;
+
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.ZipParameters;
@@ -24,7 +33,24 @@ public class Main {
 	 */
 	public static void main(String[] args) {
 		Semaphore sem_flag = new Semaphore(32);
+		Thread tc;
 		try {
+			
+			// HSQLDB connect
+			Server hsqlServer = null;
+			Connection connection = null;
+			ResultSet dataset = null;
+			hsqlServer = new Server();
+			hsqlServer.setLogWriter(null);
+			hsqlServer.setSilent(true);
+			hsqlServer.setDatabaseName(0, "skoodskill");
+			hsqlServer.setDatabasePath(0, "file:skoodeskilldb");
+			hsqlServer.start();
+			// Create connection
+			Class.forName("org.hsqldb.jdbcDriver");
+			connection = DriverManager.getConnection("jdbc:hsqldb://localhost/skoodeskill", "sa", "");
+			connection.prepareStatement("drop table dic if exists;").execute();
+			connection.prepareStatement("create table dic(word varchar(20) not null);").execute();
 
 			// Read file into StringBuilder
 			BufferedReader readfile = new BufferedReader(new FileReader(
@@ -40,13 +66,50 @@ public class Main {
 				// Write file invoke thread
 				word = word.toLowerCase();
 				sem_flag.acquire();
-				new Thread(new WriteThread(sem_flag, word)).start();
+				String insertsql = "insert into dic (word)" + "values ('"+word+"');";
+				connection.prepareStatement(insertsql).execute();
+				tc = new Thread(new WriteThread(sem_flag, word));
+				tc.start();
+				tc.join();
 			}
+			
 			System.out.println("Success! : Write file succussful.");
 			for (File file : new File("./").listFiles()) {
 				sem_flag.acquire();
-				new Thread(new ZipFileFolk(sem_flag, file)).start();
+				tc = new Thread(new ZipFileFolk(sem_flag, file));
+				tc.start();
+				tc.join();
 			}
+			
+			System.out.println("Success! : Zip and Compare folder succussful.");
+			
+			//Select all once (assume DB query more then cost)
+			dataset = connection.prepareStatement("select word from dic;").executeQuery();
+			connection.prepareStatement("update dic SET word=UPPER(LEFT(word,1))+SUBSTRING(word,2,LENGTH(word));").execute();
+			hsqlServer.stop();
+			hsqlServer = null;
+			LinkedList<String> all_word = new LinkedList<String>();
+			while(dataset.next()){
+				all_word.add(dataset.getString(1));
+			}
+			int[] val = new int[4];
+			for(String w : all_word){
+				val[0] = (w.length()>5)?val[0]+1:val[0];
+				Matcher	m = Pattern.compile("(.+)\\1+").matcher(w);
+			       while (m.find()) {
+			           val[1]++;
+			           break;
+			       }
+			    if(w.charAt(0)==w.charAt(w.length()-1)){
+			    	val[2]++;
+			    }
+			    
+			}
+			System.out.println("More than 5 word count : "+val[0]);
+			System.out.println("Word collision more than 2 char count : "+val[1]);
+			System.out.println("Word first letter same the last letter count : "+val[2]);
+			
+			
 		} catch (FileNotFoundException e) {
 			// Display : file not found.
 			System.out.println("Error! : File not found.");
@@ -60,6 +123,15 @@ public class Main {
 		} catch (InterruptedException e) {
 			// TODO: handle exception
 			System.out.println("Error! : Thread interrupt error.");
+
+		} catch (ClassNotFoundException e) {
+			System.out.println("Error! : Database connection error.");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			System.out.println("Error! : Database query error.");
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
 	}

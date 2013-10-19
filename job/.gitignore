@@ -6,3 +6,6 @@
 /ZipFileFolk.class
 /ZipFileFolk$Semaphore.class
 /ZipFileFolk$WriteThread.class
+/Main$Semaphore.class
+/Main$WriteThread.class
+/Main$ZipFileFolk.class
